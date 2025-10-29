@@ -13,11 +13,19 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
-import { Minus, Plus, User, CreditCard, HelpCircle, MapPin, Navigation, Car, Bike, Truck } from 'lucide-react-native';
-import MapCard from "../components/MapCard";
-import * as Location from "expo-location";
-import polyline from "polyline";
-
+import {
+  User,
+  CreditCard,
+  HelpCircle,
+  MapPin,
+  Navigation,
+  Car,
+  Bike,
+  Truck,
+} from 'lucide-react-native';
+import MapCard from '../components/MapCard';
+import * as Location from 'expo-location';
+import polyline from 'polyline';
 
 type VehicleType = 'car' | 'auto' | 'bike' | 'tempo';
 
@@ -70,11 +78,36 @@ const vehicleOptions: VehicleOption[] = [
   },
 ];
 
+// --- DRIVERS DATABASE ---
+const driverDatabase = {
+  bike: [
+    { name: 'Ravi Singh', vehicle: 'Hero Splendor', plate: 'MH12 BK 9087' },
+    { name: 'Sahil Patel', vehicle: 'Bajaj Pulsar', plate: 'GJ05 AU 4321' },
+    { name: 'Vikram Rao', vehicle: 'TVS Apache', plate: 'KA09 TL 7722' },
+  ],
+  auto: [
+    { name: 'Imran Khan', vehicle: 'Bajaj RE Auto', plate: 'DL04 YT 2345' },
+    { name: 'Ramesh Gupta', vehicle: 'Piaggio Ape', plate: 'MH02 AB 9900' },
+    { name: 'Sunil Yadav', vehicle: 'TVS King', plate: 'RJ11 CC 6789' },
+  ],
+  car: [
+    { name: 'Priya Sharma', vehicle: 'Hyundai i20', plate: 'MH14 CD 4455' },
+    { name: 'Karan Mehta', vehicle: 'Toyota Camry', plate: 'DL10 JK 7788' },
+    { name: 'Rohit Verma', vehicle: 'Maruti Swift', plate: 'GJ01 PA 1221' },
+  ],
+  tempo: [
+    { name: 'Amit Pawar', vehicle: 'Tata Ace Mini', plate: 'MH15 NM 5544' },
+    { name: 'Deepak Chauhan', vehicle: 'Mahindra Supro', plate: 'UP16 QR 9090' },
+    { name: 'Rajesh Nair', vehicle: 'Ashok Leyland Dost', plate: 'TN22 LK 4433' },
+  ],
+};
+
 export default function MapScreen() {
   const { user } = useAuth();
   const [pickupLocation, setPickupLocation] = useState('');
   const [dropLocation, setDropLocation] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleType | null>(null);
+  const [assignedDriver, setAssignedDriver] = useState<any | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showVehicleSelection, setShowVehicleSelection] = useState(false);
   const [showDriverModal, setShowDriverModal] = useState(false);
@@ -83,13 +116,14 @@ export default function MapScreen() {
   const [detectingPickup, setDetectingPickup] = useState(false);
   const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [dropCoords, setDropCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[] | null>(null);
+  const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[] | null>(
+    null
+  );
   const [etaText, setEtaText] = useState<string | null>(null);
   const [distanceText, setDistanceText] = useState<string | null>(null);
 
-
   const calculateFare = (vehicle: VehicleOption) => {
-    return vehicle.baseFare + (vehicle.perKm * estimatedDistance);
+    return vehicle.baseFare + vehicle.perKm * estimatedDistance;
   };
 
   const handleContinueToVehicleSelection = async () => {
@@ -98,7 +132,6 @@ export default function MapScreen() {
       return;
     }
 
-  // If we don’t have dest coords yet, geocode the drop text
     let dest = dropCoords;
     if (!dest) {
       const g = await geocodeAddress(dropLocation);
@@ -108,10 +141,9 @@ export default function MapScreen() {
       }
       dest = { lat: g.lat, lng: g.lng };
       setDropCoords(dest);
-      setDropLocation(g.formatted); // normalize text (optional)
+      setDropLocation(g.formatted);
     }
 
-  // If we also have pickup coords, build the route on the map
     if (pickupCoords && dest) {
       await buildRoute(pickupCoords, dest);
     } else if (!pickupCoords) {
@@ -122,37 +154,26 @@ export default function MapScreen() {
     setShowVehicleSelection(true);
   };
 
-
+  // --- NEW DRIVER ASSIGNMENT LOGIC ---
   const handleBookRide = (vehicle: VehicleOption) => {
     setSelectedVehicle(vehicle.id);
+
+    const drivers = driverDatabase[vehicle.id];
+    const randomDriver = drivers[Math.floor(Math.random() * drivers.length)];
+    setAssignedDriver(randomDriver);
+
     setShowVehicleSelection(false);
     setTimeout(() => {
       setShowDriverModal(true);
     }, 500);
   };
 
-  const mockRideRequests = [
-    {
-      id: '1',
-      customerName: 'John Doe',
-      pickup: '123 Main St',
-      drop: '456 Oak Ave',
-      fare: 18,
-    },
-    {
-      id: '2',
-      customerName: 'Jane Smith',
-      pickup: '789 Pine Rd',
-      drop: '321 Elm St',
-      fare: 22,
-    },
-  ];
   const useCurrentPickup = async () => {
     try {
       setDetectingPickup(true);
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Location permission", "Please enable location permission to auto-fill pickup.");
+      if (status !== 'granted') {
+        Alert.alert('Location permission', 'Please enable location permission to auto-fill pickup.');
         return;
       }
 
@@ -166,50 +187,40 @@ export default function MapScreen() {
         longitude: pos.coords.longitude,
       });
 
-      const a = results?.[0] as any; // or type it properly if you prefer
+      const a = results?.[0] as any;
       const formatted =
         [a?.name, a?.street, a?.subLocality, a?.locality, a?.postalCode]
           .filter(Boolean)
-          .join(", ") ||
+          .join(', ') ||
         `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
 
       setPickupLocation(formatted);
     } catch (e) {
-      Alert.alert("Error", "Could not fetch current location.");
+      Alert.alert('Error', 'Could not fetch current location.');
     } finally {
       setDetectingPickup(false);
     }
-  }; 
+  };
 
-    const GOOGLE_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY ?? '';
-      
-    const buildRoute = async (
-      origin: { lat: number; lng: number },
-      dest: { lat: number; lng: number }
-    ) => {
-      if (!GOOGLE_KEY) {
-        Alert.alert("Config error", "Missing EXPO_PUBLIC_GOOGLE_MAPS_KEY.");
+  const GOOGLE_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY ?? '';
+
+  const buildRoute = async (origin: { lat: number; lng: number }, dest: { lat: number; lng: number }) => {
+    if (!GOOGLE_KEY) {
+      Alert.alert('Config error', 'Missing EXPO_PUBLIC_GOOGLE_MAPS_KEY.');
       return;
     }
 
     try {
-      // reset previous route/ETA
       setRouteCoords(null);
       setEtaText(null);
       setDistanceText(null);
 
-      const url =
-        `https://maps.googleapis.com/maps/api/directions/json?` +
-        `origin=${origin.lat},${origin.lng}` +
-        `&destination=${dest.lat},${dest.lng}` +
-        `&mode=driving&region=in&key=${GOOGLE_KEY}`;
-
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.lat},${origin.lng}&destination=${dest.lat},${dest.lng}&mode=driving&region=in&key=${GOOGLE_KEY}`;
       const res = await fetch(url);
       const json = await res.json();
 
-      if (json.status !== "OK" || !json.routes?.length) {
-        console.log("Directions error:", json.status, json.error_message);
-        Alert.alert("Route error", json.error_message ?? "Could not find a driving route.");
+      if (json.status !== 'OK' || !json.routes?.length) {
+        Alert.alert('Route error', json.error_message ?? 'Could not find a driving route.');
         return;
       }
 
@@ -218,23 +229,26 @@ export default function MapScreen() {
       setDistanceText(leg?.distance?.text ?? null);
 
       const points: string = json.routes[0].overview_polyline.points;
-      const decoded = (polyline.decode(points) as [number, number][])
-        .map(([lat, lng]) => ({ latitude: lat, longitude: lng }));
+      const decoded = (polyline.decode(points) as [number, number][]).map(([lat, lng]) => ({
+        latitude: lat,
+        longitude: lng,
+      }));
 
       setRouteCoords(decoded);
     } catch (e) {
-      console.error("Directions fetch failed:", e);
-      Alert.alert("Route error", "Failed to fetch route.");
+      Alert.alert('Route error', 'Failed to fetch route.');
     }
   };
+
   const geocodeAddress = async (address: string) => {
     try {
-      const url =
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_KEY}`;
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        address
+      )}&key=${GOOGLE_KEY}`;
       const res = await fetch(url);
       const json = await res.json();
 
-      if (json.status !== "OK" || !json.results?.length) return null;
+      if (json.status !== 'OK' || !json.results?.length) return null;
 
       const best = json.results[0];
       const { lat, lng } = best.geometry.location;
@@ -244,32 +258,19 @@ export default function MapScreen() {
     }
   };
 
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
       <View style={styles.mapPlaceholder}>
         <View style={{ flex: 1, width: '100%', borderRadius: 16, overflow: 'hidden' }}>
-           <MapCard
-              height={400}
-              origin={pickupCoords ? { latitude: pickupCoords.lat, longitude: pickupCoords.lng } : null}
-              destination={dropCoords ? { latitude: dropCoords.lat, longitude: dropCoords.lng } : null}
-              routeCoords={routeCoords}
-            />
+          <MapCard
+            height={400}
+            origin={pickupCoords ? { latitude: pickupCoords.lat, longitude: pickupCoords.lng } : null}
+            destination={dropCoords ? { latitude: dropCoords.lat, longitude: dropCoords.lng } : null}
+            routeCoords={routeCoords}
+          />
         </View>
-
-
-        {user?.role === 'driver' && (
-          <TouchableOpacity
-            style={styles.viewRequestsButton}
-            onPress={() => setShowRideRequests(!showRideRequests)}
-          >
-            <Text style={styles.viewRequestsButtonText}>
-              {showRideRequests ? 'Hide Ride Requests' : 'View Ride Requests'}
-            </Text>
-          </TouchableOpacity>
-        )}
 
         {user?.role === 'customer' && (
           <TouchableOpacity
@@ -281,136 +282,52 @@ export default function MapScreen() {
         )}
       </View>
 
-      {user?.role === 'driver' && showRideRequests && (
-        <ScrollView style={styles.rideRequestsContainer}>
-          <Text style={styles.rideRequestsTitle}>Ride Requests</Text>
-          {mockRideRequests.map((request) => (
-            <View key={request.id} style={styles.rideRequestCard}>
-              <View style={styles.rideRequestHeader}>
-                <Text style={styles.rideRequestCustomer}>{request.customerName}</Text>
-                <Text style={styles.rideRequestFare}>${request.fare}</Text>
-              </View>
-              <View style={styles.rideRequestLocation}>
-                <Navigation size={16} color={Colors.primary} />
-                <Text style={styles.rideRequestLocationText}>{request.pickup}</Text>
-              </View>
-              <View style={styles.rideRequestLocation}>
-                <MapPin size={16} color={Colors.error} />
-                <Text style={styles.rideRequestLocationText}>{request.drop}</Text>
-              </View>
-              <View style={styles.rideRequestActions}>
-                <TouchableOpacity
-                  style={styles.declineButton}
-                  onPress={() => Alert.alert('Ride Declined')}
-                >
-                  <Text style={styles.declineButtonText}>Decline</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.acceptButton}
-                  onPress={() => Alert.alert('Success', 'Ride Accepted!')}
-                >
-                  <Text style={styles.acceptButtonText}>Accept</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-      )}
-
-      {user?.role === 'customer' && (
-        <View style={styles.bottomNav}>
-          <TouchableOpacity
-            style={styles.navBox}
-            onPress={() => Alert.alert('Payment', 'Payment options coming soon')}
-          >
-            <View style={styles.navIcon}>
-              <CreditCard size={28} color={Colors.primary} />
-            </View>
-            <Text style={styles.navLabel}>Payments</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navBox}
-            onPress={() => Alert.alert('Help', 'Need assistance? Contact support at help@cabby.com')}
-          >
-            <View style={styles.navIcon}>
-              <HelpCircle size={28} color={Colors.primary} />
-            </View>
-            <Text style={styles.navLabel}>Help</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <Modal
-        visible={showBookingModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowBookingModal(false)}
-      >
+      {/* --- Booking Modal --- */}
+      <Modal visible={showBookingModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Where to?</Text>
 
+            {/* Pickup Input */}
             <View style={styles.inputContainer}>
-              <View style={styles.inputIcon}>
-                <Navigation size={20} color={Colors.primary} />
-              </View>
-
+              <Navigation size={20} color={Colors.primary} />
               <TextInput
                 style={styles.inputWithIcon}
                 placeholder="Pickup location"
-                placeholderTextColor={Colors.textSecondary}
                 value={pickupLocation}
                 onChangeText={setPickupLocation}
               />
-
               <TouchableOpacity
                 onPress={useCurrentPickup}
                 disabled={detectingPickup}
                 style={styles.currentBtn}
               >
-              <Text style={styles.currentBtnText}>
-                {detectingPickup ? "Detecting…" : "Use current"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <Text style={styles.currentBtnText}>
+                  {detectingPickup ? 'Detecting…' : 'Use current'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-
+            {/* Drop Input */}
             <View style={styles.inputContainer}>
-              <View style={styles.inputIcon}>
-                <MapPin size={20} color={Colors.error} />
-              </View>
+              <MapPin size={20} color={Colors.error} />
               <TextInput
                 style={styles.inputWithIcon}
                 placeholder="Drop location"
-                placeholderTextColor={Colors.textSecondary}
                 value={dropLocation}
                 onChangeText={setDropLocation}
               />
             </View>
 
-
-
             <TouchableOpacity style={styles.bookButton} onPress={handleContinueToVehicleSelection}>
               <Text style={styles.bookButtonText}>Continue</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setShowBookingModal(false)}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      <Modal
-        visible={showVehicleSelection}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowVehicleSelection(false)}
-      >
+      {/* --- Vehicle Selection Modal --- */}
+      <Modal visible={showVehicleSelection} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, styles.vehicleModalContent]}>
             <Text style={styles.modalTitle}>Choose a ride</Text>
@@ -420,7 +337,6 @@ export default function MapScreen() {
               {vehicleOptions.map((vehicle) => {
                 const Icon = vehicle.icon;
                 const fare = calculateFare(vehicle);
-
                 return (
                   <TouchableOpacity
                     key={vehicle.id}
@@ -436,43 +352,31 @@ export default function MapScreen() {
                       <Text style={styles.vehicleEta}>{vehicle.eta} away</Text>
                     </View>
                     <View style={styles.vehicleFare}>
-                      <Text style={styles.vehicleFareAmount}>${fare}</Text>
+                      <Text style={styles.vehicleFareAmount}>₹{fare}</Text>
                     </View>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
-
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => {
-                setShowVehicleSelection(false);
-                setShowBookingModal(true);
-              }}
-            >
-              <Text style={styles.cancelButtonText}>Back</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      <Modal
-        visible={showDriverModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowDriverModal(false)}
-      >
+      {/* --- DRIVER ASSIGNED MODAL --- */}
+      <Modal visible={showDriverModal} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Driver Assigned!</Text>
-            <View style={styles.driverInfo}>
-              <View style={styles.driverAvatar}>
-                <User size={40} color={Colors.primary} />
+            {assignedDriver && (
+              <View style={styles.driverInfo}>
+                <View style={styles.driverAvatar}>
+                  <User size={40} color={Colors.primary} />
+                </View>
+                <Text style={styles.driverName}>{assignedDriver.name}</Text>
+                <Text style={styles.driverVehicle}>{assignedDriver.vehicle}</Text>
+                <Text style={styles.driverPlate}>{assignedDriver.plate}</Text>
               </View>
-              <Text style={styles.driverName}>Jane Driver</Text>
-              <Text style={styles.driverVehicle}>Toyota Camry 2022</Text>
-              <Text style={styles.driverPlate}>ABC-1234</Text>
-            </View>
+            )}
             <TouchableOpacity
               style={styles.bookButton}
               onPress={() => {
