@@ -1,4 +1,22 @@
-
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  Modal,
+  Alert,
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Colors } from '../../constants/Colors';
+import { useAuth } from '../../context/AuthContext';
+import { Minus, Plus, User, CreditCard, HelpCircle, MapPin, Navigation, Car, Bike, Truck } from 'lucide-react-native';
+import MapCard from "../components/MapCard";
+import * as Location from "expo-location";
+import polyline from "polyline";
 
 
 type VehicleType = 'car' | 'auto' | 'bike' | 'tempo';
