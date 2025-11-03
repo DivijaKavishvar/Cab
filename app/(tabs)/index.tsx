@@ -37,7 +37,7 @@ const vehicleOptions: VehicleOption[] = [
     name: 'Bike',
     icon: Bike,
     capacity: '1 person',
-    baseFare: 10,
+    baseFare: 50,
     perKm: 2,
     eta: '2 mins',
   },
@@ -46,7 +46,7 @@ const vehicleOptions: VehicleOption[] = [
     name: 'Auto',
     icon: Truck,
     capacity: '3 people',
-    baseFare: 15,
+    baseFare: 75,
     perKm: 3,
     eta: '3 mins',
   },
@@ -55,7 +55,7 @@ const vehicleOptions: VehicleOption[] = [
     name: 'Car',
     icon: Car,
     capacity: '4 people',
-    baseFare: 25,
+    baseFare: 100,
     perKm: 5,
     eta: '5 mins',
   },
@@ -64,7 +64,7 @@ const vehicleOptions: VehicleOption[] = [
     name: 'Tempo',
     icon: Truck,
     capacity: '6 people',
-    baseFare: 40,
+    baseFare: 150,
     perKm: 7,
     eta: '7 mins',
   },
@@ -288,7 +288,7 @@ export default function MapScreen() {
             <View key={request.id} style={styles.rideRequestCard}>
               <View style={styles.rideRequestHeader}>
                 <Text style={styles.rideRequestCustomer}>{request.customerName}</Text>
-                <Text style={styles.rideRequestFare}>${request.fare}</Text>
+                <Text style={styles.rideRequestFare}>₹{request.fare}</Text>
               </View>
               <View style={styles.rideRequestLocation}>
                 <Navigation size={16} color={Colors.primary} />
@@ -436,7 +436,7 @@ export default function MapScreen() {
                       <Text style={styles.vehicleEta}>{vehicle.eta} away</Text>
                     </View>
                     <View style={styles.vehicleFare}>
-                      <Text style={styles.vehicleFareAmount}>${fare}</Text>
+                      <Text style={styles.vehicleFareAmount}>₹{fare}</Text>
                     </View>
                   </TouchableOpacity>
                 );
