@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "config": {
-        "googleMapsApiKey": "AIzaSyAlLNaErfCFsLoGqbiihpo6EIQvKb1XIHo"
+        "googleMapsApiKey": "REMOVED_USE_ENV"
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We use your location to show nearby rides."
@@ -21,7 +21,7 @@
     "android": {
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyAlLNaErfCFsLoGqbiihpo6EIQvKb1XIHo"
+          "apiKey": "REMOVED_USE_ENV"
         }
       },
       "permissions": [
