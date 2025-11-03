@@ -853,4 +853,3 @@ const styles = StyleSheet.create({
 
 
 
-In this dollar sign is coming i want to do rupees how to do
